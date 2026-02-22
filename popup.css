@@ -328,6 +328,11 @@ input[type="text"]:focus {
 }
 
 /* ── Parked pill ────────────────────────────────────────────────────────── */
+@keyframes pillIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 .parked-pill {
   position: relative;
   display: inline-flex;
@@ -343,6 +348,7 @@ input[type="text"]:focus {
   transition: background var(--ease);
   max-width: 210px;
   user-select: none;
+  animation: pillIn 160ms ease both;
 }
 
 .parked-pill:hover { background: var(--lavender-hover); }
@@ -362,7 +368,7 @@ input[type="text"]:focus {
 }
 
 .parked-dismiss {
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 14px;
@@ -374,10 +380,15 @@ input[type="text"]:focus {
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
-  transition: background var(--ease);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ease), background var(--ease);
 }
 
-.parked-pill:hover .parked-dismiss { display: flex; }
+.parked-pill:hover .parked-dismiss {
+  opacity: 1;
+  pointer-events: auto;
+}
 .parked-dismiss:hover { background: rgba(124, 58, 237, 0.32); }
 
 .parked-hint {
