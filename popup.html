@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Boop</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="shell">
+
+    <!-- ── Setup view ─────────────────────────────────────────── -->
+    <div id="setup-view" class="view" hidden>
+      <header class="header">
+        <h1 class="wordmark">boop<span class="dot">.</span></h1>
+        <p class="subtitle">gentle focus companion</p>
+      </header>
+
+      <div class="field">
+        <label for="task-input">What are you working on right now?</label>
+        <input
+          id="task-input"
+          type="text"
+          placeholder="e.g. Finishing the pitch deck..."
+          maxlength="120"
+          autocomplete="off"
+          spellcheck="false"
+          autofocus
+        />
+      </div>
+
+      <button id="start-btn" class="btn-primary" disabled>Start Focus</button>
+    </div>
+
+    <!-- ── Active view ────────────────────────────────────────── -->
+    <div id="active-view" class="view" hidden>
+      <header class="header">
+        <h1 class="wordmark">boop<span class="dot">.</span></h1>
+        <p class="subtitle">gentle focus companion</p>
+      </header>
+
+      <!-- Status pill -->
+      <div class="focus-status">
+        <span class="focus-dot"></span>
+        Focusing
+      </div>
+
+      <!-- Current task -->
+      <p id="active-task-name" class="active-task-name"></p>
+
+      <!-- Timer card -->
+      <div class="timer-card">
+        <div id="session-timer" class="timer">00:00:00</div>
+        <div class="timer-card-label">SESSION TIME</div>
+      </div>
+
+      <!-- Next check-in pill -->
+      <div class="checkin-pill">
+        🔔 <span id="checkin-countdown">Next check-in in 15:00</span>
+      </div>
+
+      <!-- Switch task row -->
+      <div class="switch-row">
+        <input
+          id="switch-input"
+          type="text"
+          placeholder="New task..."
+          maxlength="120"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="switch-btn" class="btn-switch" disabled>Switch</button>
+      </div>
+
+      <!-- End session -->
+      <button id="end-btn" class="btn-end">End Session</button>
+
+      <!-- Parked tasks -->
+      <div id="parked-section" class="parked-section" hidden>
+        <div class="parked-divider"></div>
+        <div class="parked-header-row">
+          <span class="parked-label">PARKED</span>
+          <span id="parked-count" class="parked-count-badge">0</span>
+        </div>
+        <div id="parked-list" class="parked-list"></div>
+        <p class="parked-hint">tap a bubble to resume</p>
+      </div>
+    </div>
+
+    <!-- ── Footer (both views) ───────────────────────────────── -->
+    <footer class="footer">Be kind to your brain 🧠</footer>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
