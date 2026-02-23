@@ -12,6 +12,10 @@
   --green-bg:       #DCFCE7;
   --green-text:     #166534;
 
+  --amber:      #F59E0B;
+  --amber-bg:   #FEF3C7;
+  --amber-text: #92400E;
+
   --lavender-bg:    #EDE9FE;
   --lavender-text:  #7C3AED;
   --lavender-hover: #DDD6FE;
@@ -151,14 +155,12 @@ input[type="text"]:focus {
   cursor: not-allowed;
 }
 
-/* ── Focusing badge ─────────────────────────────────────────────────────── */
-.focus-status {
+/* ── Drift pill ──────────────────────────────────────────────────────────── */
+.drift-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   align-self: flex-start;
-  background: var(--green-bg);
-  color: var(--green-text);
   padding: 4px 10px 4px 8px;
   border-radius: var(--r-pill);
   font-size: 11.5px;
@@ -166,14 +168,18 @@ input[type="text"]:focus {
   letter-spacing: 0.2px;
 }
 
-.focus-dot {
+.drift-on-track { background: var(--green-bg);  color: var(--green-text);  }
+.drift-away     { background: var(--amber-bg);  color: var(--amber-text);  }
+
+.drift-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--green);
   flex-shrink: 0;
-  animation: pulse 2.2s ease-in-out infinite;
 }
+
+.drift-on-track .drift-dot { background: var(--green); animation: pulse 2.2s ease-in-out infinite; }
+.drift-away .drift-dot     { background: var(--amber); }
 
 @keyframes pulse {
   0%, 100% { opacity: 1;    transform: scale(1);    }
@@ -187,6 +193,12 @@ input[type="text"]:focus {
   color: var(--text-primary);
   line-height: 1.4;
   word-break: break-word;
+}
+
+.focus-site-display {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
 }
 
 /* ── Timer card ─────────────────────────────────────────────────────────── */

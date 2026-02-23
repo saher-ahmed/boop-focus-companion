@@ -5,7 +5,10 @@ const activeView     = document.getElementById('active-view');
 const taskInput      = document.getElementById('task-input');
 const startBtn       = document.getElementById('start-btn');
 // Active
+const driftPill      = document.getElementById('drift-pill');
+const driftText      = document.getElementById('drift-text');
 const activeTaskName = document.getElementById('active-task-name');
+const focusSiteDisp  = document.getElementById('focus-site-display');
 const sessionTimer   = document.getElementById('session-timer');
 const checkinCdown   = document.getElementById('checkin-countdown');
 const switchInput    = document.getElementById('switch-input');
@@ -17,8 +20,9 @@ const parkedCount    = document.getElementById('parked-count');
 const parkedList     = document.getElementById('parked-list');
 
 // ── State ──────────────────────────────────────────────────────────────────
-let tickInterval = null;
-let startTime    = null;
+let tickInterval     = null;
+let startTime        = null;
+let currentFocusSite = null;
 
 // ── Formatting ────────────────────────────────────────────────────────────
 const pad = (n) => String(n).padStart(2, '0');
@@ -42,12 +46,56 @@ function formatElapsed(ms) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+function formatDriftTime(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${pad(sec)}`;
+}
+
 function escapeHtml(str) {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ── Domain helpers ─────────────────────────────────────────────────────────
+function getDomain(url) {
+  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) return null;
+  try {
+    const host = new URL(url).hostname;
+    return host.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+function getCurrentDomain() {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs.length) { resolve(null); return; }
+      resolve(getDomain(tabs[0].url));
+    });
+  });
+}
+
+// ── Drift pill ─────────────────────────────────────────────────────────────
+function updateDriftPill(driftStart) {
+  if (!currentFocusSite) {
+    driftPill.className = 'drift-pill drift-on-track';
+    driftText.textContent = 'Focusing';
+    return;
+  }
+  if (driftStart) {
+    const elapsed = Date.now() - driftStart;
+    driftPill.className = 'drift-pill drift-away';
+    driftText.textContent = `Away for ${formatDriftTime(elapsed)}`;
+  } else {
+    driftPill.className = 'drift-pill drift-on-track';
+    driftText.textContent = 'On track';
+  }
 }
 
 // ── Tick ───────────────────────────────────────────────────────────────────
@@ -60,6 +108,9 @@ function tick() {
       checkinCdown.textContent =
         `Next check-in in ${formatMSCountdown(alarm.scheduledTime - Date.now())}`;
     }
+  });
+  chrome.storage.local.get('driftStart', ({ driftStart }) => {
+    updateDriftPill(driftStart ?? null);
   });
 }
 
@@ -121,24 +172,34 @@ function showView(el) {
 function showSetup() {
   stopTick();
   startTime = null;
+  currentFocusSite = null;
   showView(setupView);
   taskInput.value = '';
   startBtn.disabled = true;
   setTimeout(() => taskInput.focus(), 60);
 }
 
-function showActive(task, ts, parked = []) {
+function showActive(task, ts, parked = [], focusSite = null) {
   startTime = ts;
+  currentFocusSite = focusSite || null;
   activeTaskName.textContent = task;
   switchInput.value = '';
   switchBtn.disabled = true;
+
+  if (focusSite) {
+    focusSiteDisp.textContent = `Focusing on ${focusSite}`;
+    focusSiteDisp.hidden = false;
+  } else {
+    focusSiteDisp.hidden = true;
+  }
+
   showView(activeView);
   renderParked(parked);
   startTick();
 }
 
 // ── Session actions ────────────────────────────────────────────────────────
-function beginSession() {
+async function beginSession() {
   const task = taskInput.value.trim();
   if (!task) return;
 
@@ -146,57 +207,59 @@ function beginSession() {
   startBtn.disabled = true;
   startBtn.textContent = 'Starting…';
 
-  chrome.storage.local.set({ task, startTime: ts, parked: [] }, () => {
-    chrome.runtime.sendMessage({ type: 'startFocus' }, () => {
+  const domain = await getCurrentDomain();
+
+  chrome.storage.local.set({ task, startTime: ts, parked: [], focusSite: domain, driftStart: null }, () => {
+    chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain }, () => {
       startBtn.textContent = 'Start Focus';
-      showActive(task, ts, []);
+      showActive(task, ts, [], domain);
     });
   });
 }
 
-function switchTask() {
+async function switchTask() {
   const newTask = switchInput.value.trim();
   if (!newTask) return;
+
+  const domain = await getCurrentDomain();
 
   chrome.storage.local.get(['task', 'startTime', 'parked'], (data) => {
     const parked = [...(data.parked || [])];
 
-    // Park the current task with its elapsed time
     if (data.task) {
       const elapsed = Date.now() - (data.startTime || Date.now());
       parked.push({ name: data.task, elapsed });
     }
 
     const ts = Date.now();
-    chrome.storage.local.set({ task: newTask, startTime: ts, parked }, () => {
-      chrome.runtime.sendMessage({ type: 'startFocus' }, () => {
-        showActive(newTask, ts, parked);
+    chrome.storage.local.set({ task: newTask, startTime: ts, parked, focusSite: domain, driftStart: null }, () => {
+      chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain }, () => {
+        showActive(newTask, ts, parked, domain);
       });
     });
   });
 }
 
-function resumeParked(index) {
+async function resumeParked(index) {
+  const domain = await getCurrentDomain();
+
   chrome.storage.local.get(['task', 'startTime', 'parked'], (data) => {
     const parked = [...(data.parked || [])];
     const target = parked[index];
     if (!target) return;
 
-    // Remove target from parked list
     parked.splice(index, 1);
 
-    // Park the currently active task
     if (data.task) {
       const elapsed = Date.now() - (data.startTime || Date.now());
       parked.push({ name: data.task, elapsed });
     }
 
-    // Adjust startTime so the timer continues from where the task was parked
     const ts = Date.now() - target.elapsed;
 
-    chrome.storage.local.set({ task: target.name, startTime: ts, parked }, () => {
-      chrome.runtime.sendMessage({ type: 'startFocus' }, () => {
-        showActive(target.name, ts, parked);
+    chrome.storage.local.set({ task: target.name, startTime: ts, parked, focusSite: domain, driftStart: null }, () => {
+      chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain }, () => {
+        showActive(target.name, ts, parked, domain);
       });
     });
   });
@@ -211,7 +274,7 @@ function dismissParked(index) {
 
 function endSession() {
   stopTick();
-  chrome.storage.local.remove(['task', 'startTime', 'parked'], () => {
+  chrome.storage.local.remove(['task', 'startTime', 'parked', 'focusSite', 'driftStart'], () => {
     chrome.runtime.sendMessage({ type: 'stopFocus' }, () => showSetup());
   });
 }
@@ -236,10 +299,17 @@ switchBtn.addEventListener('click', switchTask);
 endBtn.addEventListener('click', endSession);
 
 // ── Boot: restore state ────────────────────────────────────────────────────
-chrome.storage.local.get(['task', 'startTime', 'parked'], ({ task, startTime: ts, parked = [] }) => {
-  if (task && ts) {
-    showActive(task, ts, parked);
-  } else {
-    showSetup();
+chrome.storage.local.get(
+  ['task', 'startTime', 'parked', 'focusSite', 'openSetupOnLoad'],
+  ({ task, startTime: ts, parked = [], focusSite, openSetupOnLoad }) => {
+    if (openSetupOnLoad) {
+      chrome.storage.local.remove('openSetupOnLoad');
+      showSetup();
+      renderParked(parked);
+    } else if (task && ts) {
+      showActive(task, ts, parked, focusSite || null);
+    } else {
+      showSetup();
+    }
   }
-});
+);
