@@ -58,8 +58,11 @@
       <p id="focus-site-display" class="focus-site-display" hidden></p>
 
       <!-- Timer card -->
-      <div class="timer-card">
-        <div id="session-timer" class="timer">20:00</div>
+      <div class="timer-card" id="timer-card">
+        <div class="timer-row">
+          <div id="session-timer" class="timer">20:00</div>
+          <button id="pause-btn" class="btn-pause-icon" title="Pause">⏸</button>
+        </div>
         <div class="timer-card-label">SPRINT TIME REMAINING</div>
         <div id="sprint-counter" class="sprint-counter">Sprint 1</div>
       </div>
@@ -77,11 +80,8 @@
         <button id="switch-btn" class="btn-switch" disabled>Switch</button>
       </div>
 
-      <!-- Session actions -->
-      <div class="session-actions">
-        <button id="pause-btn" class="btn-pause">Pause</button>
-        <button id="end-btn" class="btn-end">End Session</button>
-      </div>
+      <!-- End session -->
+      <button id="end-btn" class="btn-end">End Session</button>
 
       <!-- Parked tasks -->
       <div id="parked-section" class="parked-section" hidden>

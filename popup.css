@@ -247,6 +247,14 @@ input[type="text"]:focus {
   border-radius: var(--r-lg);
   padding: 16px 12px 14px;
   text-align: center;
+  transition: background var(--ease);
+}
+
+.timer-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .timer {
@@ -256,6 +264,7 @@ input[type="text"]:focus {
   letter-spacing: -1.5px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  transition: opacity var(--ease), color var(--ease);
 }
 
 .timer-card-label {
@@ -265,6 +274,7 @@ input[type="text"]:focus {
   text-transform: uppercase;
   color: var(--text-tertiary);
   margin-top: 6px;
+  transition: opacity var(--ease);
 }
 
 .sprint-counter {
@@ -274,6 +284,36 @@ input[type="text"]:focus {
   text-transform: uppercase;
   color: var(--text-tertiary);
   margin-top: 4px;
+}
+
+/* Paused state dims the timer and label */
+.timer-card.paused .timer       { opacity: 0.3; }
+.timer-card.paused .timer-card-label { opacity: 0.4; }
+
+/* ── Pause icon button ───────────────────────────────────────────────────── */
+.btn-pause-icon {
+  position: absolute;
+  right: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--ease), color var(--ease);
+  flex-shrink: 0;
+  opacity: 1 !important;  /* never dim with parent */
+}
+
+.btn-pause-icon:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--text-secondary);
 }
 
 /* ── Switch task row ────────────────────────────────────────────────────── */
@@ -306,28 +346,9 @@ input[type="text"]:focus {
 .btn-switch:hover:not(:disabled) { background: var(--btn-purple-hover); }
 .btn-switch:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ── Session actions row ────────────────────────────────────────────────── */
-.session-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-
-.btn-pause {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  font-family: inherit;
-  cursor: pointer;
-  padding: 0;
-  transition: color var(--ease);
-}
-
-.btn-pause:hover { color: var(--text-primary); }
-
+/* ── End session link ───────────────────────────────────────────────────── */
 .btn-end {
+  align-self: center;
   background: none;
   border: none;
   color: var(--text-tertiary);

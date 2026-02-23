@@ -11,6 +11,7 @@ const driftPill      = document.getElementById('drift-pill');
 const driftText      = document.getElementById('drift-text');
 const activeTaskName = document.getElementById('active-task-name');
 const focusSiteDisp  = document.getElementById('focus-site-display');
+const timerCard      = document.getElementById('timer-card');
 const sessionTimer   = document.getElementById('session-timer');
 const sprintCounter  = document.getElementById('sprint-counter');
 const switchInput    = document.getElementById('switch-input');
@@ -76,6 +77,12 @@ function getDomain(url) {
   }
 }
 
+function isSameSite(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  return a.endsWith('.' + b) || b.endsWith('.' + a);
+}
+
 function getCurrentDomain() {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -105,7 +112,8 @@ sprintBtns.forEach(btn => {
 });
 
 // ── Drift pill ─────────────────────────────────────────────────────────────
-function updateDriftPill(driftStart, paused) {
+// isOnFocusSite: live result from tab query (not lagged storage value)
+function updateDriftPill(driftStart, paused, isOnFocusSite) {
   if (paused) {
     driftPill.className = 'drift-pill drift-paused';
     driftText.textContent = 'Paused';
@@ -116,25 +124,49 @@ function updateDriftPill(driftStart, paused) {
     driftText.textContent = 'Focusing';
     return;
   }
-  if (driftStart) {
-    const elapsed = Date.now() - driftStart;
+  if (!isOnFocusSite) {
     driftPill.className = 'drift-pill drift-away';
-    driftText.textContent = `Away for ${formatDriftTime(elapsed)}`;
-  } else {
-    driftPill.className = 'drift-pill drift-on-track';
-    driftText.textContent = 'On track';
+    const elapsed = driftStart ? Date.now() - driftStart : 0;
+    driftText.textContent = elapsed > 4000
+      ? `Away · ${formatDriftTime(elapsed)}`
+      : `Away from ${currentFocusSite}`;
+    return;
   }
+  driftPill.className = 'drift-pill drift-on-track';
+  driftText.textContent = 'On track';
 }
 
 // ── Tick ───────────────────────────────────────────────────────────────────
 function tick() {
   chrome.storage.local.get(['sprintEndTime', 'sprintCount', 'paused', 'driftStart'], (data) => {
-    if (!data.paused && data.sprintEndTime) {
+    const paused = data.paused ?? false;
+
+    // Sprint countdown
+    if (!paused && data.sprintEndTime) {
       sessionTimer.textContent = formatMS(data.sprintEndTime - Date.now());
     }
-    const displayCount = (data.sprintCount || 0) + 1;
-    sprintCounter.textContent = `Sprint ${displayCount}`;
-    updateDriftPill(data.driftStart ?? null, data.paused ?? false);
+
+    // Timer card paused visual state
+    if (paused) {
+      timerCard.classList.add('paused');
+      pauseBtn.textContent = '▶';
+      sprintCounter.textContent = 'Paused';
+    } else {
+      timerCard.classList.remove('paused');
+      pauseBtn.textContent = '⏸';
+      const displayCount = (data.sprintCount || 0) + 1;
+      sprintCounter.textContent = `Sprint ${displayCount}`;
+    }
+
+    // Live tab query drives the drift pill (not the lagged driftStart value alone)
+    if (paused || !currentFocusSite) {
+      updateDriftPill(data.driftStart ?? null, paused, true);
+      return;
+    }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const domain = tabs && tabs.length ? getDomain(tabs[0].url) : null;
+      updateDriftPill(data.driftStart ?? null, false, isSameSite(domain, currentFocusSite));
+    });
   });
 }
 
@@ -154,7 +186,9 @@ function pauseSession() {
     chrome.alarms.clear(ALARM_SPRINT);
     chrome.alarms.clear(ALARM_DRIFT_CHECK);
     isPaused = true;
-    pauseBtn.textContent = 'Resume';
+    pauseBtn.textContent = '▶';
+    timerCard.classList.add('paused');
+    sprintCounter.textContent = 'Paused';
     driftPill.className = 'drift-pill drift-paused';
     driftText.textContent = 'Paused';
   });
@@ -168,7 +202,8 @@ function resumeSession() {
       chrome.alarms.create(ALARM_SPRINT, { delayInMinutes: remaining / 60000 });
       chrome.alarms.create(ALARM_DRIFT_CHECK, { periodInMinutes: 0.5 });
       isPaused = false;
-      pauseBtn.textContent = 'Pause';
+      pauseBtn.textContent = '⏸';
+      timerCard.classList.remove('paused');
     });
   });
 }
@@ -239,7 +274,9 @@ function showActive(task, parked = [], focusSite = null, paused = false) {
   switchInput.value = '';
   switchBtn.disabled = true;
   isPaused = paused;
-  pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+  pauseBtn.textContent = paused ? '▶' : '⏸';
+  if (paused) timerCard.classList.add('paused');
+  else timerCard.classList.remove('paused');
 
   if (focusSite) {
     focusSiteDisp.textContent = `Focusing on ${focusSite}`;
