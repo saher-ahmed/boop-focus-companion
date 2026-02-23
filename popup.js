@@ -113,7 +113,7 @@ sprintBtns.forEach(btn => {
 
 // ── Drift pill ─────────────────────────────────────────────────────────────
 // isOnFocusSite: live result from tab query (not lagged storage value)
-function updateDriftPill(driftStart, paused, isOnFocusSite) {
+function updateDriftPill(leftAt, paused, isOnFocusSite) {
   if (paused) {
     driftPill.className = 'drift-pill drift-paused';
     driftText.textContent = 'Paused';
@@ -126,7 +126,7 @@ function updateDriftPill(driftStart, paused, isOnFocusSite) {
   }
   if (!isOnFocusSite) {
     driftPill.className = 'drift-pill drift-away';
-    const elapsed = driftStart ? Date.now() - driftStart : 0;
+    const elapsed = leftAt ? Date.now() - leftAt : 0;
     driftText.textContent = elapsed > 4000
       ? `Away · ${formatDriftTime(elapsed)}`
       : `Away from ${currentFocusSite}`;
@@ -138,7 +138,7 @@ function updateDriftPill(driftStart, paused, isOnFocusSite) {
 
 // ── Tick ───────────────────────────────────────────────────────────────────
 function tick() {
-  chrome.storage.local.get(['sprintEndTime', 'sprintCount', 'paused', 'driftStart'], (data) => {
+  chrome.storage.local.get(['sprintEndTime', 'sprintCount', 'paused', 'leftAt'], (data) => {
     const paused = data.paused ?? false;
 
     // Sprint countdown
@@ -158,14 +158,14 @@ function tick() {
       sprintCounter.textContent = `Sprint ${displayCount}`;
     }
 
-    // Live tab query drives the drift pill (not the lagged driftStart value alone)
+    // Live tab query drives the drift pill (not the lagged leftAt value alone)
     if (paused || !currentFocusSite) {
-      updateDriftPill(data.driftStart ?? null, paused, true);
+      updateDriftPill(data.leftAt ?? null, paused, true);
       return;
     }
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const domain = tabs && tabs.length ? getDomain(tabs[0].url) : null;
-      updateDriftPill(data.driftStart ?? null, false, isSameSite(domain, currentFocusSite));
+      updateDriftPill(data.leftAt ?? null, false, isSameSite(domain, currentFocusSite));
     });
   });
 }
@@ -198,7 +198,7 @@ function resumeSession() {
   chrome.storage.local.get(['sprintEndTime', 'pausedAt'], ({ sprintEndTime, pausedAt }) => {
     const remaining = Math.max(0, sprintEndTime - pausedAt);
     const newEnd = Date.now() + remaining;
-    chrome.storage.local.set({ paused: false, pausedAt: null, sprintEndTime: newEnd, driftStart: null }, () => {
+    chrome.storage.local.set({ paused: false, pausedAt: null, sprintEndTime: newEnd, leftAt: null }, () => {
       chrome.alarms.create(ALARM_SPRINT, { delayInMinutes: remaining / 60000 });
       chrome.alarms.create(ALARM_DRIFT_CHECK, { periodInMinutes: 0.5 });
       isPaused = false;
@@ -306,7 +306,7 @@ function beginSession() {
     startTime: ts,
     parked: [],
     focusSite: domain,
-    driftStart: null,
+    leftAt: null,
     sprintMins: selectedSprint,
     sprintEndTime: ts + selectedSprint * 60000,
     sprintCount: 0,
@@ -340,7 +340,7 @@ async function switchTask() {
       startTime: ts,
       parked,
       focusSite: domain,
-      driftStart: null,
+      leftAt: null,
       sprintMins: selectedSprint,
       sprintEndTime: ts + selectedSprint * 60000,
       sprintCount: 0,
@@ -375,7 +375,7 @@ async function resumeParked(index) {
       startTime: ts,
       parked,
       focusSite: domain,
-      driftStart: null,
+      leftAt: null,
       sprintMins: selectedSprint,
       sprintEndTime: ts + selectedSprint * 60000,
       sprintCount: 0,
@@ -399,7 +399,7 @@ function dismissParked(index) {
 function endSession() {
   stopTick();
   chrome.storage.local.remove(
-    ['task', 'startTime', 'parked', 'focusSite', 'driftStart', 'sprintMins', 'sprintEndTime', 'sprintCount', 'paused', 'pausedAt'],
+    ['task', 'startTime', 'parked', 'focusSite', 'leftAt', 'sprintMins', 'sprintEndTime', 'sprintCount', 'paused', 'pausedAt'],
     () => {
       chrome.runtime.sendMessage({ type: 'stopFocus' }, () => showSetup());
     }
