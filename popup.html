@@ -28,6 +28,15 @@
         />
       </div>
 
+      <div class="sprint-picker">
+        <button class="sprint-btn" data-mins="5">5 min</button>
+        <button class="sprint-btn" data-mins="10">10 min</button>
+        <button class="sprint-btn" data-mins="15">15 min</button>
+        <button class="sprint-btn selected" data-mins="20">20 min</button>
+      </div>
+
+      <p id="detected-site" class="detected-site" hidden></p>
+
       <button id="start-btn" class="btn-primary" disabled>Start Focus</button>
     </div>
 
@@ -50,13 +59,9 @@
 
       <!-- Timer card -->
       <div class="timer-card">
-        <div id="session-timer" class="timer">00:00:00</div>
-        <div class="timer-card-label">SESSION TIME</div>
-      </div>
-
-      <!-- Next check-in pill -->
-      <div class="checkin-pill">
-        🔔 <span id="checkin-countdown">Next check-in in 15:00</span>
+        <div id="session-timer" class="timer">20:00</div>
+        <div class="timer-card-label">SPRINT TIME REMAINING</div>
+        <div id="sprint-counter" class="sprint-counter">Sprint 1</div>
       </div>
 
       <!-- Switch task row -->
@@ -72,8 +77,11 @@
         <button id="switch-btn" class="btn-switch" disabled>Switch</button>
       </div>
 
-      <!-- End session -->
-      <button id="end-btn" class="btn-end">End Session</button>
+      <!-- Session actions -->
+      <div class="session-actions">
+        <button id="pause-btn" class="btn-pause">Pause</button>
+        <button id="end-btn" class="btn-end">End Session</button>
+      </div>
 
       <!-- Parked tasks -->
       <div id="parked-section" class="parked-section" hidden>

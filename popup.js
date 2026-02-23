@@ -4,36 +4,40 @@ const activeView     = document.getElementById('active-view');
 // Setup
 const taskInput      = document.getElementById('task-input');
 const startBtn       = document.getElementById('start-btn');
+const sprintBtns     = document.querySelectorAll('.sprint-btn');
+const detectedSiteEl = document.getElementById('detected-site');
 // Active
 const driftPill      = document.getElementById('drift-pill');
 const driftText      = document.getElementById('drift-text');
 const activeTaskName = document.getElementById('active-task-name');
 const focusSiteDisp  = document.getElementById('focus-site-display');
 const sessionTimer   = document.getElementById('session-timer');
-const checkinCdown   = document.getElementById('checkin-countdown');
+const sprintCounter  = document.getElementById('sprint-counter');
 const switchInput    = document.getElementById('switch-input');
 const switchBtn      = document.getElementById('switch-btn');
+const pauseBtn       = document.getElementById('pause-btn');
 const endBtn         = document.getElementById('end-btn');
 // Parked
 const parkedSection  = document.getElementById('parked-section');
 const parkedCount    = document.getElementById('parked-count');
 const parkedList     = document.getElementById('parked-list');
 
+// ── Alarm constants (for popup-side alarm management) ──────────────────────
+const ALARM_SPRINT      = 'boop-sprint';
+const ALARM_DRIFT_CHECK = 'boop-drift-check';
+
 // ── State ──────────────────────────────────────────────────────────────────
 let tickInterval     = null;
-let startTime        = null;
 let currentFocusSite = null;
+let selectedSprint   = 20;
+let isPaused         = false;
+let detectedDomain   = null;
 
 // ── Formatting ────────────────────────────────────────────────────────────
 const pad = (n) => String(n).padStart(2, '0');
 
-function formatHMS(ms) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
-}
-
-function formatMSCountdown(ms) {
-  const s = Math.max(0, Math.floor(ms / 1000));
+function formatMS(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
   return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
 }
 
@@ -81,8 +85,32 @@ function getCurrentDomain() {
   });
 }
 
+function showDetectedSite(domain) {
+  detectedDomain = domain;
+  if (domain) {
+    detectedSiteEl.textContent = `focusing on ${domain}`;
+    detectedSiteEl.hidden = false;
+  } else {
+    detectedSiteEl.hidden = true;
+  }
+}
+
+// ── Sprint picker ──────────────────────────────────────────────────────────
+sprintBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    sprintBtns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedSprint = parseInt(btn.dataset.mins);
+  });
+});
+
 // ── Drift pill ─────────────────────────────────────────────────────────────
-function updateDriftPill(driftStart) {
+function updateDriftPill(driftStart, paused) {
+  if (paused) {
+    driftPill.className = 'drift-pill drift-paused';
+    driftText.textContent = 'Paused';
+    return;
+  }
   if (!currentFocusSite) {
     driftPill.className = 'drift-pill drift-on-track';
     driftText.textContent = 'Focusing';
@@ -100,17 +128,13 @@ function updateDriftPill(driftStart) {
 
 // ── Tick ───────────────────────────────────────────────────────────────────
 function tick() {
-  if (startTime !== null) {
-    sessionTimer.textContent = formatHMS(Date.now() - startTime);
-  }
-  chrome.alarms.get('boop-checkin', (alarm) => {
-    if (alarm) {
-      checkinCdown.textContent =
-        `Next check-in in ${formatMSCountdown(alarm.scheduledTime - Date.now())}`;
+  chrome.storage.local.get(['sprintEndTime', 'sprintCount', 'paused', 'driftStart'], (data) => {
+    if (!data.paused && data.sprintEndTime) {
+      sessionTimer.textContent = formatMS(data.sprintEndTime - Date.now());
     }
-  });
-  chrome.storage.local.get('driftStart', ({ driftStart }) => {
-    updateDriftPill(driftStart ?? null);
+    const displayCount = (data.sprintCount || 0) + 1;
+    sprintCounter.textContent = `Sprint ${displayCount}`;
+    updateDriftPill(data.driftStart ?? null, data.paused ?? false);
   });
 }
 
@@ -123,6 +147,33 @@ function startTick() {
 function stopTick() {
   if (tickInterval !== null) { clearInterval(tickInterval); tickInterval = null; }
 }
+
+// ── Pause / Resume ─────────────────────────────────────────────────────────
+function pauseSession() {
+  chrome.storage.local.set({ paused: true, pausedAt: Date.now() }, () => {
+    chrome.alarms.clear(ALARM_SPRINT);
+    chrome.alarms.clear(ALARM_DRIFT_CHECK);
+    isPaused = true;
+    pauseBtn.textContent = 'Resume';
+    driftPill.className = 'drift-pill drift-paused';
+    driftText.textContent = 'Paused';
+  });
+}
+
+function resumeSession() {
+  chrome.storage.local.get(['sprintEndTime', 'pausedAt'], ({ sprintEndTime, pausedAt }) => {
+    const remaining = Math.max(0, sprintEndTime - pausedAt);
+    const newEnd = Date.now() + remaining;
+    chrome.storage.local.set({ paused: false, pausedAt: null, sprintEndTime: newEnd, driftStart: null }, () => {
+      chrome.alarms.create(ALARM_SPRINT, { delayInMinutes: remaining / 60000 });
+      chrome.alarms.create(ALARM_DRIFT_CHECK, { periodInMinutes: 0.5 });
+      isPaused = false;
+      pauseBtn.textContent = 'Pause';
+    });
+  });
+}
+
+pauseBtn.addEventListener('click', () => isPaused ? resumeSession() : pauseSession());
 
 // ── Parked tasks rendering ─────────────────────────────────────────────────
 function renderParked(parked = []) {
@@ -171,20 +222,24 @@ function showView(el) {
 
 function showSetup() {
   stopTick();
-  startTime = null;
   currentFocusSite = null;
+  isPaused = false;
+  detectedDomain = null;
+  detectedSiteEl.hidden = true;
   showView(setupView);
   taskInput.value = '';
   startBtn.disabled = true;
   setTimeout(() => taskInput.focus(), 60);
+  getCurrentDomain().then(showDetectedSite);
 }
 
-function showActive(task, ts, parked = [], focusSite = null) {
-  startTime = ts;
+function showActive(task, parked = [], focusSite = null, paused = false) {
   currentFocusSite = focusSite || null;
   activeTaskName.textContent = task;
   switchInput.value = '';
   switchBtn.disabled = true;
+  isPaused = paused;
+  pauseBtn.textContent = paused ? 'Resume' : 'Pause';
 
   if (focusSite) {
     focusSiteDisp.textContent = `Focusing on ${focusSite}`;
@@ -199,7 +254,7 @@ function showActive(task, ts, parked = [], focusSite = null) {
 }
 
 // ── Session actions ────────────────────────────────────────────────────────
-async function beginSession() {
+function beginSession() {
   const task = taskInput.value.trim();
   if (!task) return;
 
@@ -207,12 +262,23 @@ async function beginSession() {
   startBtn.disabled = true;
   startBtn.textContent = 'Starting…';
 
-  const domain = await getCurrentDomain();
+  const domain = detectedDomain;
 
-  chrome.storage.local.set({ task, startTime: ts, parked: [], focusSite: domain, driftStart: null }, () => {
-    chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain }, () => {
+  chrome.storage.local.set({
+    task,
+    startTime: ts,
+    parked: [],
+    focusSite: domain,
+    driftStart: null,
+    sprintMins: selectedSprint,
+    sprintEndTime: ts + selectedSprint * 60000,
+    sprintCount: 0,
+    paused: false,
+    pausedAt: null,
+  }, () => {
+    chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain, sprintMins: selectedSprint }, () => {
       startBtn.textContent = 'Start Focus';
-      showActive(task, ts, [], domain);
+      showActive(task, [], domain, false);
     });
   });
 }
@@ -232,9 +298,20 @@ async function switchTask() {
     }
 
     const ts = Date.now();
-    chrome.storage.local.set({ task: newTask, startTime: ts, parked, focusSite: domain, driftStart: null }, () => {
-      chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain }, () => {
-        showActive(newTask, ts, parked, domain);
+    chrome.storage.local.set({
+      task: newTask,
+      startTime: ts,
+      parked,
+      focusSite: domain,
+      driftStart: null,
+      sprintMins: selectedSprint,
+      sprintEndTime: ts + selectedSprint * 60000,
+      sprintCount: 0,
+      paused: false,
+      pausedAt: null,
+    }, () => {
+      chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain, sprintMins: selectedSprint }, () => {
+        showActive(newTask, parked, domain, false);
       });
     });
   });
@@ -255,11 +332,21 @@ async function resumeParked(index) {
       parked.push({ name: data.task, elapsed });
     }
 
-    const ts = Date.now() - target.elapsed;
-
-    chrome.storage.local.set({ task: target.name, startTime: ts, parked, focusSite: domain, driftStart: null }, () => {
-      chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain }, () => {
-        showActive(target.name, ts, parked, domain);
+    const ts = Date.now();
+    chrome.storage.local.set({
+      task: target.name,
+      startTime: ts,
+      parked,
+      focusSite: domain,
+      driftStart: null,
+      sprintMins: selectedSprint,
+      sprintEndTime: ts + selectedSprint * 60000,
+      sprintCount: 0,
+      paused: false,
+      pausedAt: null,
+    }, () => {
+      chrome.runtime.sendMessage({ type: 'startFocus', focusSite: domain, sprintMins: selectedSprint }, () => {
+        showActive(target.name, parked, domain, false);
       });
     });
   });
@@ -274,9 +361,12 @@ function dismissParked(index) {
 
 function endSession() {
   stopTick();
-  chrome.storage.local.remove(['task', 'startTime', 'parked', 'focusSite', 'driftStart'], () => {
-    chrome.runtime.sendMessage({ type: 'stopFocus' }, () => showSetup());
-  });
+  chrome.storage.local.remove(
+    ['task', 'startTime', 'parked', 'focusSite', 'driftStart', 'sprintMins', 'sprintEndTime', 'sprintCount', 'paused', 'pausedAt'],
+    () => {
+      chrome.runtime.sendMessage({ type: 'stopFocus' }, () => showSetup());
+    }
+  );
 }
 
 // ── Event listeners ────────────────────────────────────────────────────────
@@ -300,14 +390,14 @@ endBtn.addEventListener('click', endSession);
 
 // ── Boot: restore state ────────────────────────────────────────────────────
 chrome.storage.local.get(
-  ['task', 'startTime', 'parked', 'focusSite', 'openSetupOnLoad'],
-  ({ task, startTime: ts, parked = [], focusSite, openSetupOnLoad }) => {
+  ['task', 'startTime', 'parked', 'focusSite', 'openSetupOnLoad', 'paused', 'sprintCount', 'sprintEndTime'],
+  ({ task, startTime: ts, parked = [], focusSite, openSetupOnLoad, paused, sprintCount, sprintEndTime }) => {
     if (openSetupOnLoad) {
       chrome.storage.local.remove('openSetupOnLoad');
       showSetup();
       renderParked(parked);
     } else if (task && ts) {
-      showActive(task, ts, parked, focusSite || null);
+      showActive(task, parked, focusSite || null, paused || false);
     } else {
       showSetup();
     }

@@ -8,6 +8,7 @@
     "alarms",
     "notifications",
     "tabs",
+    "activeTab",
     "windows"
   ],
   "background": {

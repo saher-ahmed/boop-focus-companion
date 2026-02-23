@@ -155,6 +155,44 @@ input[type="text"]:focus {
   cursor: not-allowed;
 }
 
+/* ── Sprint picker ───────────────────────────────────────────────────────── */
+.sprint-picker {
+  display: flex;
+  gap: 6px;
+}
+
+.sprint-btn {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: background var(--ease), color var(--ease), border-color var(--ease);
+}
+
+.sprint-btn.selected {
+  background: #C4B5FD;
+  color: var(--btn-purple);
+  border-color: #C4B5FD;
+  font-weight: 600;
+}
+
+.sprint-btn:hover:not(.selected) {
+  background: var(--lavender-bg);
+  border-color: var(--lavender-text);
+}
+
+.detected-site {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
 /* ── Drift pill ──────────────────────────────────────────────────────────── */
 .drift-pill {
   display: inline-flex;
@@ -170,6 +208,8 @@ input[type="text"]:focus {
 
 .drift-on-track { background: var(--green-bg);  color: var(--green-text);  }
 .drift-away     { background: var(--amber-bg);  color: var(--amber-text);  }
+.drift-paused   { background: var(--amber-bg);  color: var(--amber-text);  }
+.drift-paused .drift-dot { background: var(--amber); }
 
 .drift-dot {
   width: 7px;
@@ -227,18 +267,13 @@ input[type="text"]:focus {
   margin-top: 6px;
 }
 
-/* ── Check-in countdown pill ────────────────────────────────────────────── */
-.checkin-pill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: var(--lavender-bg);
-  color: var(--lavender-text);
-  padding: 7px 14px;
-  border-radius: var(--r-pill);
-  font-size: 12.5px;
-  font-weight: 500;
+.sprint-counter {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-top: 4px;
 }
 
 /* ── Switch task row ────────────────────────────────────────────────────── */
@@ -271,7 +306,27 @@ input[type="text"]:focus {
 .btn-switch:hover:not(:disabled) { background: var(--btn-purple-hover); }
 .btn-switch:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ── End session link ───────────────────────────────────────────────────── */
+/* ── Session actions row ────────────────────────────────────────────────── */
+.session-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.btn-pause {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--ease);
+}
+
+.btn-pause:hover { color: var(--text-primary); }
+
 .btn-end {
   background: none;
   border: none;
@@ -282,7 +337,6 @@ input[type="text"]:focus {
   text-decoration: underline;
   text-underline-offset: 2px;
   padding: 0;
-  align-self: center;
   transition: color var(--ease);
 }
 
