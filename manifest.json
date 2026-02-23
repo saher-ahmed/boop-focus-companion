@@ -1,15 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Boop",
-  "version": "1.0",
-  "description": "A gentle focus companion. Set your task, get friendly check-ins every 15 minutes.",
+  "version": "2.0",
+  "description": "A gentle focus companion.",
   "permissions": [
     "storage",
     "alarms",
     "notifications",
-    "tabs",
-    "activeTab",
-    "windows"
+    "tabs"
   ],
   "background": {
     "service_worker": "background.js"

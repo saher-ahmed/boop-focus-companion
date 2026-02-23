@@ -1,26 +1,24 @@
 /* ── Design tokens ──────────────────────────────────────────────────────── */
 :root {
   --bg:             #ffffff;
-  --surface:        #F3F4F6;
+  --surface:        #F9FAFB;
   --border:         #E5E7EB;
 
   --text-primary:   #111827;
   --text-secondary: #6B7280;
   --text-tertiary:  #9CA3AF;
 
-  --green:          #0F9D58;
-  --green-bg:       #DCFCE7;
-  --green-text:     #166534;
-
-  --amber:      #F59E0B;
-  --amber-bg:   #FEF3C7;
-  --amber-text: #92400E;
-
+  --lavender:       #C4B5FD;
+  --lavender-dark:  #7C3AED;
   --lavender-bg:    #EDE9FE;
-  --lavender-text:  #7C3AED;
-  --lavender-hover: #DDD6FE;
-  --btn-purple:     #7C3AED;
-  --btn-purple-hover: #6D28D9;
+
+  --green:          #10B981;
+  --green-bg:       #D1FAE5;
+  --green-text:     #065F46;
+
+  --amber:          #F59E0B;
+  --amber-bg:       #FEF3C7;
+  --amber-text:     #92400E;
 
   --r-sm:   8px;
   --r-md:  12px;
@@ -28,7 +26,7 @@
   --r-pill: 999px;
 
   --ease: 200ms ease;
-  --popup-w: 320px;
+  --popup-w: 300px;
 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
@@ -48,23 +46,23 @@ body {
 .shell {
   display: flex;
   flex-direction: column;
-  padding: 20px 18px 14px;
-  gap: 14px;
+  padding: 24px 20px 22px;
+  gap: 16px;
 }
 
 /* ── Views ──────────────────────────────────────────────────────────────── */
 .view {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .view.animate {
-  animation: fadeUp 200ms ease both;
+  animation: fadeUp 180ms ease both;
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(5px); }
   to   { opacity: 1; transform: translateY(0);   }
 }
 
@@ -83,28 +81,27 @@ body {
   line-height: 1.1;
 }
 
-.dot { color: var(--btn-purple); }
+.dot { color: var(--lavender-dark); }
 
 .subtitle {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text-tertiary);
 }
 
-/* ── Setup field ────────────────────────────────────────────────────────── */
+/* ── Field ──────────────────────────────────────────────────────────────── */
 .field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
 }
 
 .field label {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
-  line-height: 1.4;
 }
 
-/* ── Inputs ─────────────────────────────────────────────────────────────── */
+/* ── Input ──────────────────────────────────────────────────────────────── */
 input[type="text"] {
   width: 100%;
   padding: 9px 11px;
@@ -122,37 +119,9 @@ input[type="text"] {
 input[type="text"]::placeholder { color: var(--text-tertiary); }
 
 input[type="text"]:focus {
-  border-color: var(--btn-purple);
+  border-color: var(--lavender-dark);
   background: var(--bg);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-}
-
-/* ── Primary button (setup) ─────────────────────────────────────────────── */
-.btn-primary {
-  width: 100%;
-  padding: 10px 14px;
-  font-size: 13.5px;
-  font-weight: 600;
-  font-family: inherit;
-  background: var(--btn-purple);
-  color: #fff;
-  border: none;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: background var(--ease), box-shadow var(--ease),
-              transform var(--ease), opacity var(--ease);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--btn-purple-hover);
-  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.28);
-}
-
-.btn-primary:active:not(:disabled) { transform: translateY(1px); }
-
-.btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* ── Sprint picker ───────────────────────────────────────────────────────── */
@@ -163,7 +132,7 @@ input[type="text"]:focus {
 
 .sprint-btn {
   flex: 1;
-  padding: 6px 0;
+  padding: 7px 0;
   font-size: 12px;
   font-weight: 500;
   font-family: inherit;
@@ -176,177 +145,101 @@ input[type="text"]:focus {
 }
 
 .sprint-btn.selected {
-  background: #C4B5FD;
-  color: var(--btn-purple);
-  border-color: #C4B5FD;
+  background: var(--lavender);
+  color: var(--lavender-dark);
+  border-color: var(--lavender);
   font-weight: 600;
 }
 
 .sprint-btn:hover:not(.selected) {
   background: var(--lavender-bg);
-  border-color: var(--lavender-text);
+  border-color: var(--lavender-dark);
 }
 
-.detected-site {
-  font-size: 11.5px;
-  color: var(--text-tertiary);
-  text-align: center;
+/* ── Primary button ─────────────────────────────────────────────────────── */
+.btn-primary {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--lavender-dark);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background var(--ease), opacity var(--ease);
 }
 
-/* ── Drift pill ──────────────────────────────────────────────────────────── */
-.drift-pill {
+.btn-primary:hover:not(:disabled) { background: #6D28D9; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Status pill ─────────────────────────────────────────────────────────── */
+.status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   align-self: flex-start;
-  padding: 4px 10px 4px 8px;
+  padding: 5px 12px 5px 10px;
   border-radius: var(--r-pill);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.2px;
 }
 
-.drift-on-track { background: var(--green-bg);  color: var(--green-text);  }
-.drift-away     { background: var(--amber-bg);  color: var(--amber-text);  }
-.drift-paused   { background: var(--amber-bg);  color: var(--amber-text);  }
-.drift-paused .drift-dot { background: var(--amber); }
+.status-on-track { background: var(--green-bg);  color: var(--green-text); }
+.status-drifted  { background: var(--amber-bg);  color: var(--amber-text); }
 
-.drift-dot {
+.status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.drift-on-track .drift-dot { background: var(--green); animation: pulse 2.2s ease-in-out infinite; }
-.drift-away .drift-dot     { background: var(--amber); }
+.status-on-track .status-dot { background: var(--green); animation: pulse 2.2s ease-in-out infinite; }
+.status-drifted  .status-dot { background: var(--amber); }
 
 @keyframes pulse {
   0%, 100% { opacity: 1;    transform: scale(1);    }
   50%       { opacity: 0.35; transform: scale(0.68); }
 }
 
-/* ── Active task name ───────────────────────────────────────────────────── */
-.active-task-name {
-  font-size: 15px;
+/* ── Task block ──────────────────────────────────────────────────────────── */
+.task-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.task-name {
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.4;
+  line-height: 1.3;
   word-break: break-word;
 }
 
-.focus-site-display {
+.focus-domain {
   font-size: 12px;
   color: var(--text-tertiary);
-  margin-top: 2px;
 }
 
-/* ── Timer card ─────────────────────────────────────────────────────────── */
-.timer-card {
-  background: var(--surface);
-  border-radius: var(--r-lg);
-  padding: 16px 12px 14px;
-  text-align: center;
-  transition: background var(--ease);
-}
-
-.timer-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.timer {
-  font-size: 40px;
+/* ── Timer display ───────────────────────────────────────────────────────── */
+.timer-display {
+  font-size: 52px;
   font-weight: 300;
   color: var(--text-primary);
-  letter-spacing: -1.5px;
+  letter-spacing: -2px;
   font-variant-numeric: tabular-nums;
+  text-align: center;
   line-height: 1;
-  transition: opacity var(--ease), color var(--ease);
-}
-
-.timer-card-label {
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  margin-top: 6px;
+  padding: 10px 0;
   transition: opacity var(--ease);
 }
 
-.sprint-counter {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  margin-top: 4px;
-}
+.timer-display.paused { opacity: 0.3; }
 
-/* Paused state dims the timer and label */
-.timer-card.paused .timer       { opacity: 0.3; }
-.timer-card.paused .timer-card-label { opacity: 0.4; }
-
-/* ── Pause icon button ───────────────────────────────────────────────────── */
-.btn-pause-icon {
-  position: absolute;
-  right: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.06);
-  color: var(--text-tertiary);
-  font-size: 10px;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background var(--ease), color var(--ease);
-  flex-shrink: 0;
-  opacity: 1 !important;  /* never dim with parent */
-}
-
-.btn-pause-icon:hover {
-  background: rgba(0, 0, 0, 0.12);
-  color: var(--text-secondary);
-}
-
-/* ── Switch task row ────────────────────────────────────────────────────── */
-.switch-row {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-}
-
-.switch-row input[type="text"] {
-  flex: 1;
-  min-width: 0;
-}
-
-.btn-switch {
-  flex-shrink: 0;
-  padding: 9px 13px;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: inherit;
-  background: var(--btn-purple);
-  color: #fff;
-  border: none;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: background var(--ease), opacity var(--ease);
-  white-space: nowrap;
-}
-
-.btn-switch:hover:not(:disabled) { background: var(--btn-purple-hover); }
-.btn-switch:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ── End session link ───────────────────────────────────────────────────── */
+/* ── End / done link ─────────────────────────────────────────────────────── */
 .btn-end {
   align-self: center;
   background: none;
@@ -363,131 +256,29 @@ input[type="text"]:focus {
 
 .btn-end:hover { color: var(--text-secondary); }
 
-/* ── Parked section ─────────────────────────────────────────────────────── */
-.parked-section {
+/* ── Complete view ───────────────────────────────────────────────────────── */
+.complete-block {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.parked-divider {
-  height: 1px;
-  background: var(--border);
-}
-
-.parked-header-row {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.parked-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-.parked-count-badge {
-  font-size: 10.5px;
-  font-weight: 700;
-  background: var(--lavender-bg);
-  color: var(--lavender-text);
-  padding: 1px 7px;
-  border-radius: var(--r-pill);
-}
-
-.parked-list {
-  display: flex;
-  flex-wrap: wrap;
   gap: 6px;
-  max-height: 130px;
-  overflow-y: auto;
+  padding: 8px 0;
 }
 
-/* Minimal scrollbar for parked list */
-.parked-list::-webkit-scrollbar { width: 3px; height: 3px; }
-.parked-list::-webkit-scrollbar-track { background: transparent; }
-.parked-list::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--r-pill);
-}
-
-/* ── Parked pill ────────────────────────────────────────────────────────── */
-@keyframes pillIn {
-  from { opacity: 0; transform: scale(0.88); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-.parked-pill {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--lavender-bg);
-  color: var(--lavender-text);
-  padding: 5px 9px;
-  border-radius: var(--r-pill);
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--ease);
-  max-width: 210px;
-  user-select: none;
-  animation: pillIn 160ms ease both;
-}
-
-.parked-pill:hover { background: var(--lavender-hover); }
-
-.parked-pill-name {
-  max-width: 118px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.parked-pill-time {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  font-weight: 400;
-  flex-shrink: 0;
-}
-
-.parked-dismiss {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: rgba(124, 58, 237, 0.18);
-  color: var(--lavender-text);
-  font-size: 9px;
-  font-weight: 700;
+.complete-emoji {
+  font-size: 32px;
   line-height: 1;
-  flex-shrink: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--ease), background var(--ease);
 }
 
-.parked-pill:hover .parked-dismiss {
-  opacity: 1;
-  pointer-events: auto;
+.complete-heading {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
-.parked-dismiss:hover { background: rgba(124, 58, 237, 0.32); }
 
-.parked-hint {
-  font-size: 11px;
-  color: var(--text-tertiary);
+.complete-summary {
+  font-size: 13px;
+  color: var(--text-secondary);
   text-align: center;
-}
-
-/* ── Footer ─────────────────────────────────────────────────────────────── */
-.footer {
-  font-size: 11.5px;
-  color: var(--text-tertiary);
-  text-align: center;
-  padding-top: 2px;
+  line-height: 1.4;
 }

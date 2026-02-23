@@ -1,10 +1,15 @@
 console.log('[boop] background.js loaded');
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
+const ALARM_CHECK  = 'boop-check';   // fires every 30s
+const ALARM_SPRINT = 'boop-sprint';
 
+const DRIFT_THRESHOLD_MS = 2 * 60 * 1000;  // notify after 2 min away
+const NUDGE_INTERVAL_MS  = 5 * 60 * 1000;  // repeat nudge every 5 min
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 function getDomain(url) {
-  if (!url) return null;
-  if (!url.startsWith('http://') && !url.startsWith('https://')) return null;
+  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) return null;
   try {
     return new URL(url).hostname.replace(/^www\./, '');
   } catch {
@@ -17,123 +22,137 @@ function isSameSite(a, b) {
   return a === b || a.endsWith('.' + b) || b.endsWith('.' + a);
 }
 
-// ── Drift check (runs every 1 minute) ─────────────────────────────────────
-const DRIFT_THRESHOLD_MINS = 2;   // notify after this many minutes away
-const DRIFT_ALARM_INTERVAL = 1;   // alarm fires every N minutes
-
+// ── Drift check ────────────────────────────────────────────────────────────
 async function checkDrift() {
-  console.log('[boop] checkDrift() called');
+  console.log('[boop] checkDrift called');
 
-  const data = await chrome.storage.local.get(['task', 'focusSite', 'leftAt', 'notifiedAt', 'paused']);
-  console.log('[boop] storage:', data);
+  const data = await chrome.storage.local.get([
+    'task', 'focusSite', 'leftAt', 'lastNudgeAt',
+    'autoPaused', 'autoPausedAt', 'sprintEndTime', 'sprintDone',
+  ]);
+  console.log('[boop] storage:', JSON.stringify(data));
 
-  if (!data.task || !data.focusSite) {
-    console.log('[boop] no active session, skipping');
+  if (!data.task || !data.focusSite || data.sprintDone) {
+    console.log('[boop] no active session or sprint done, skipping');
     return;
   }
 
-  if (data.paused) {
-    console.log('[boop] session is paused, skipping');
+  let tabs;
+  try {
+    tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  } catch (e) {
+    console.log('[boop] tabs query error:', e);
     return;
   }
 
-  // Query active tab
-  chrome.tabs.query({ active: true, lastFocusedWindow: true }, async (tabs) => {
-    if (!tabs || tabs.length === 0) {
-      console.log('[boop] no active tab found');
-      return;
-    }
+  if (!tabs || !tabs.length) {
+    console.log('[boop] no active tab found');
+    return;
+  }
 
-    const tab = tabs[0];
-    const currentDomain = getDomain(tab.url);
-    console.log('[boop] active tab domain:', currentDomain, '| focus domain:', data.focusSite);
+  const domain = getDomain(tabs[0].url);
+  console.log('[boop] active domain:', domain, '| focus site:', data.focusSite);
 
-    if (isSameSite(currentDomain, data.focusSite)) {
-      // Back on focus site — reset drift state
-      console.log('[boop] on focus site — on track');
-      if (data.leftAt || data.notifiedAt) {
-        await chrome.storage.local.set({ leftAt: null, notifiedAt: null });
-        chrome.notifications.clear('boop-drift');
-        console.log('[boop] cleared leftAt + notifiedAt');
+  // ── On focus site ─────────────────────────────────────────────────────────
+  if (isSameSite(domain, data.focusSite)) {
+    console.log('[boop] on focus site — on track');
+
+    const updates = {};
+    let needUpdate = false;
+
+    if (data.leftAt)      { updates.leftAt = null;      needUpdate = true; }
+    if (data.lastNudgeAt) { updates.lastNudgeAt = null; needUpdate = true; }
+
+    if (data.autoPaused && data.autoPausedAt && data.sprintEndTime) {
+      const awayMs = Date.now() - data.autoPausedAt;
+      const newEnd = data.sprintEndTime + awayMs;
+      const remainingMins = (newEnd - Date.now()) / 60000;
+      console.log('[boop] auto-resuming sprint — away for', (awayMs / 60000).toFixed(2), 'min, remaining:', remainingMins.toFixed(2), 'min');
+
+      updates.autoPaused    = false;
+      updates.autoPausedAt  = null;
+      updates.sprintEndTime = newEnd;
+      needUpdate = true;
+
+      if (remainingMins > 0) {
+        chrome.alarms.create(ALARM_SPRINT, { delayInMinutes: remainingMins });
+        console.log('[boop] sprint alarm recreated, delay:', remainingMins.toFixed(2), 'min');
       }
-      return;
     }
 
-    // On a different site
-    if (!data.leftAt) {
-      // First time we notice they've left — record the timestamp
-      const now = Date.now();
-      await chrome.storage.local.set({ leftAt: now });
-      console.log('[boop] left focus site, recorded leftAt:', now);
-      return;
-    }
+    if (needUpdate) await chrome.storage.local.set(updates);
+    chrome.notifications.clear('boop-drift');
+    console.log('[boop] drift state cleared on return');
+    return;
+  }
 
-    // They were already away — check how long
-    const minsAway = (Date.now() - data.leftAt) / 60000;
-    console.log('[boop] away for', minsAway.toFixed(2), 'min | threshold:', DRIFT_THRESHOLD_MINS, 'min | already notified:', !!data.notifiedAt);
+  // ── On different site ─────────────────────────────────────────────────────
+  console.log('[boop] on different site');
+  const now = Date.now();
 
-    if (minsAway < DRIFT_THRESHOLD_MINS) {
-      console.log('[boop] under threshold, no notification yet');
-      return;
-    }
-
-    if (data.notifiedAt) {
-      console.log('[boop] already notified this drift episode, skipping');
-      return;
-    }
-
-    // Send notification — only once per drift episode
-    const minsDisplay = Math.floor(minsAway);
-    const title = 'Boop!';
-    const message = `You have been away from ${data.focusSite} for ${minsDisplay} minute${minsDisplay !== 1 ? 's' : ''}. You were working on: ${data.task}`;
-    console.log('[boop] sending notification — title:', title, '| message:', message);
-
-    chrome.notifications.create('boop-drift', {
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title,
-      message,
-    }, (id) => {
-      if (chrome.runtime.lastError) {
-        console.log('[boop] notification error:', chrome.runtime.lastError.message);
-      } else {
-        console.log('[boop] notification sent, id:', id);
-        chrome.storage.local.set({ notifiedAt: Date.now() });
-      }
+  if (!data.leftAt) {
+    // First detection of departure
+    console.log('[boop] first departure — recording leftAt, auto-pausing sprint');
+    await chrome.storage.local.set({
+      leftAt:       now,
+      autoPaused:   true,
+      autoPausedAt: now,
     });
+    chrome.alarms.clear(ALARM_SPRINT);
+    return;
+  }
+
+  const awayMs = now - data.leftAt;
+  console.log('[boop] away for', (awayMs / 60000).toFixed(2), 'min | threshold:', (DRIFT_THRESHOLD_MS / 60000), 'min');
+
+  if (awayMs < DRIFT_THRESHOLD_MS) {
+    console.log('[boop] under threshold, no nudge yet');
+    return;
+  }
+
+  // Check nudge interval
+  const lastNudge = data.lastNudgeAt || 0;
+  const timeSinceNudge = now - lastNudge;
+
+  if (lastNudge > 0 && timeSinceNudge < NUDGE_INTERVAL_MS) {
+    console.log('[boop] nudge cooldown active, next in', ((NUDGE_INTERVAL_MS - timeSinceNudge) / 60000).toFixed(2), 'min');
+    return;
+  }
+
+  // Send drift notification
+  const message = `You wandered off! You were working on: ${data.task}. Get back to ${data.focusSite}?`;
+  console.log('[boop] sending drift notification:', message);
+
+  chrome.notifications.create('boop-drift', {
+    type:     'basic',
+    iconUrl:  'icons/icon48.png',
+    title:    'Boop!',
+    message,
+  }, (id) => {
+    if (chrome.runtime.lastError) {
+      console.log('[boop] notification error:', chrome.runtime.lastError.message);
+    } else {
+      console.log('[boop] drift notification sent, id:', id);
+    }
   });
+
+  await chrome.storage.local.set({ lastNudgeAt: now });
 }
 
-// ── Alarm listener ────────────────────────────────────────────────────────
-
-chrome.alarms.onAlarm.addListener((alarm) => {
-  console.log('[boop] alarm fired:', alarm.name);
-  if (alarm.name === 'drift-check') {
-    checkDrift();
-  }
-  if (alarm.name === 'boop-sprint') {
-    handleSprintDone();
-  }
-});
-
 // ── Sprint done ────────────────────────────────────────────────────────────
-
 async function handleSprintDone() {
   console.log('[boop] sprint done');
-  const data = await chrome.storage.local.get(['task', 'sprintMins', 'sprintCount']);
+  const data = await chrome.storage.local.get(['task', 'sprintMins']);
   if (!data.task) return;
 
-  const newCount = (data.sprintCount || 0) + 1;
-  await chrome.storage.local.set({ sprintCount: newCount });
+  await chrome.storage.local.set({ sprintDone: true });
 
+  const mins = data.sprintMins || 20;
   chrome.notifications.create('boop-sprint', {
-    type: 'basic',
+    type:    'basic',
     iconUrl: 'icons/icon48.png',
-    title: `Sprint ${newCount} done! 🎉`,
-    message: `${data.sprintMins || 20} min on "${data.task}". Keep going?`,
-    buttons: [{ title: '▶ Another sprint' }, { title: '☕ Take a break' }],
-    requireInteraction: true,
-    priority: 2,
+    title:   'Sprint complete! 🎉',
+    message: `Nice! ${mins} minutes done on "${data.task}". Open Boop to go again.`,
   }, (id) => {
     if (chrome.runtime.lastError) {
       console.log('[boop] sprint notification error:', chrome.runtime.lastError.message);
@@ -143,28 +162,14 @@ async function handleSprintDone() {
   });
 }
 
-// ── Sprint notification buttons ────────────────────────────────────────────
-
-chrome.notifications.onButtonClicked.addListener(async (notifId, btnIndex) => {
-  console.log('[boop] button clicked — notif:', notifId, 'btn:', btnIndex);
-  if (notifId !== 'boop-sprint') return;
-
-  chrome.notifications.clear('boop-sprint');
-
-  if (btnIndex === 0) {
-    const { sprintMins = 20 } = await chrome.storage.local.get('sprintMins');
-    const sprintEndTime = Date.now() + sprintMins * 60000;
-    await chrome.storage.local.set({ sprintEndTime });
-    chrome.alarms.create('boop-sprint', { delayInMinutes: sprintMins });
-    console.log('[boop] another sprint started:', sprintMins, 'min');
-  } else {
-    await chrome.storage.local.set({ paused: true, pausedAt: Date.now() });
-    console.log('[boop] taking a break — session paused');
-  }
+// ── Alarm listener ─────────────────────────────────────────────────────────
+chrome.alarms.onAlarm.addListener((alarm) => {
+  console.log('[boop] alarm fired:', alarm.name);
+  if (alarm.name === ALARM_CHECK)  checkDrift();
+  if (alarm.name === ALARM_SPRINT) handleSprintDone();
 });
 
 // ── Messages from popup ────────────────────────────────────────────────────
-
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   console.log('[boop] message received:', msg.type);
 
@@ -172,21 +177,41 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     const { focusSite, sprintMins = 20 } = msg;
     console.log('[boop] startFocus — site:', focusSite, 'sprint:', sprintMins, 'min');
 
-    // Clear any existing alarms and notifications
-    chrome.alarms.clear('drift-check');
-    chrome.alarms.clear('boop-sprint');
+    chrome.alarms.clear(ALARM_CHECK);
+    chrome.alarms.clear(ALARM_SPRINT);
     chrome.notifications.clear('boop-drift');
+    chrome.notifications.clear('boop-sprint');
 
-    // Start the drift-check alarm
-    chrome.alarms.create('drift-check', { periodInMinutes: DRIFT_ALARM_INTERVAL });
-    console.log('[boop] drift-check alarm created, interval:', DRIFT_ALARM_INTERVAL, 'min');
+    chrome.alarms.create(ALARM_CHECK,  { periodInMinutes: 0.5 });
+    chrome.alarms.create(ALARM_SPRINT, { delayInMinutes: sprintMins });
+    console.log('[boop] alarms created — check: 0.5min interval, sprint:', sprintMins, 'min');
 
-    // Start the sprint alarm
-    chrome.alarms.create('boop-sprint', { delayInMinutes: sprintMins });
-    console.log('[boop] sprint alarm created:', sprintMins, 'min');
+    chrome.storage.local.set({
+      leftAt: null, lastNudgeAt: null,
+      autoPaused: false, autoPausedAt: null,
+      sprintDone: false,
+    }, () => sendResponse({ ok: true }));
+    return true;
+  }
 
-    // Reset drift state
-    chrome.storage.local.set({ leftAt: null }, () => {
+  if (msg.type === 'restartSprint') {
+    const { sprintMins = 20 } = msg;
+    console.log('[boop] restartSprint —', sprintMins, 'min');
+
+    chrome.alarms.clear(ALARM_SPRINT);
+    chrome.notifications.clear('boop-sprint');
+
+    const sprintEndTime = Date.now() + sprintMins * 60000;
+    chrome.storage.local.set({
+      sprintEndTime,
+      sprintDone:   false,
+      leftAt:       null,
+      lastNudgeAt:  null,
+      autoPaused:   false,
+      autoPausedAt: null,
+    }, () => {
+      chrome.alarms.create(ALARM_SPRINT, { delayInMinutes: sprintMins });
+      console.log('[boop] sprint restarted:', sprintMins, 'min');
       sendResponse({ ok: true });
     });
     return true;
@@ -194,23 +219,23 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   if (msg.type === 'stopFocus') {
     console.log('[boop] stopFocus');
-    chrome.alarms.clear('drift-check');
-    chrome.alarms.clear('boop-sprint');
+    chrome.alarms.clear(ALARM_CHECK);
+    chrome.alarms.clear(ALARM_SPRINT);
     chrome.notifications.clear('boop-drift');
     chrome.notifications.clear('boop-sprint');
     chrome.storage.local.remove(
-      ['focusSite', 'leftAt', 'notifiedAt', 'sprintMins', 'sprintEndTime', 'sprintCount', 'paused', 'pausedAt'],
-      () => { sendResponse({ ok: true }); }
+      ['task', 'focusSite', 'sprintMins', 'sprintEndTime', 'startTime',
+       'leftAt', 'lastNudgeAt', 'autoPaused', 'autoPausedAt', 'sprintDone'],
+      () => sendResponse({ ok: true })
     );
     return true;
   }
 });
 
 // ── Restore alarms on Chrome restart ──────────────────────────────────────
-
 chrome.runtime.onStartup.addListener(async () => {
   console.log('[boop] onStartup fired');
-  const data = await chrome.storage.local.get(['task', 'sprintEndTime', 'paused']);
+  const data = await chrome.storage.local.get(['task', 'sprintEndTime', 'autoPaused', 'sprintDone']);
   console.log('[boop] onStartup storage:', data);
 
   if (!data.task) {
@@ -218,15 +243,13 @@ chrome.runtime.onStartup.addListener(async () => {
     return;
   }
 
-  // Restore drift-check alarm
-  chrome.alarms.create('drift-check', { periodInMinutes: DRIFT_ALARM_INTERVAL });
-  console.log('[boop] restored drift-check alarm, interval:', DRIFT_ALARM_INTERVAL, 'min');
+  chrome.alarms.create(ALARM_CHECK, { periodInMinutes: 0.5 });
+  console.log('[boop] restored check alarm');
 
-  // Restore sprint alarm if time remains and not paused
-  if (data.sprintEndTime && !data.paused) {
+  if (data.sprintEndTime && !data.autoPaused && !data.sprintDone) {
     const remaining = (data.sprintEndTime - Date.now()) / 60000;
     if (remaining > 0) {
-      chrome.alarms.create('boop-sprint', { delayInMinutes: remaining });
+      chrome.alarms.create(ALARM_SPRINT, { delayInMinutes: remaining });
       console.log('[boop] restored sprint alarm, remaining:', remaining.toFixed(2), 'min');
     }
   }

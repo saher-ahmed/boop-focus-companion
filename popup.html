@@ -9,14 +9,14 @@
   <div class="shell">
 
     <!-- ── Setup view ─────────────────────────────────────────── -->
-    <div id="setup-view" class="view" hidden>
+    <div id="setup-view" class="view">
       <header class="header">
         <h1 class="wordmark">boop<span class="dot">.</span></h1>
         <p class="subtitle">gentle focus companion</p>
       </header>
 
       <div class="field">
-        <label for="task-input">What are you working on right now?</label>
+        <label for="task-input">What are you working on?</label>
         <input
           id="task-input"
           type="text"
@@ -35,68 +35,42 @@
         <button class="sprint-btn selected" data-mins="20">20 min</button>
       </div>
 
-      <p id="detected-site" class="detected-site" hidden></p>
-
-      <button id="start-btn" class="btn-primary" disabled>Start Focus</button>
+      <button id="start-btn" class="btn-primary" disabled>Start focusing</button>
     </div>
 
     <!-- ── Active view ────────────────────────────────────────── -->
     <div id="active-view" class="view" hidden>
+      <div id="status-pill" class="status-pill status-on-track">
+        <span class="status-dot"></span>
+        <span id="status-text">Focusing</span>
+      </div>
+
+      <div class="task-block">
+        <p id="active-task-name" class="task-name"></p>
+        <p id="focus-domain" class="focus-domain" hidden></p>
+      </div>
+
+      <div id="timer-display" class="timer-display">--:--</div>
+
+      <button id="end-btn" class="btn-end">End session</button>
+    </div>
+
+    <!-- ── Complete view ──────────────────────────────────────── -->
+    <div id="complete-view" class="view" hidden>
       <header class="header">
         <h1 class="wordmark">boop<span class="dot">.</span></h1>
         <p class="subtitle">gentle focus companion</p>
       </header>
 
-      <!-- Drift pill -->
-      <div id="drift-pill" class="drift-pill drift-on-track">
-        <span class="drift-dot"></span>
-        <span id="drift-text">On track</span>
+      <div class="complete-block">
+        <p class="complete-emoji">🎉</p>
+        <p class="complete-heading">Sprint complete!</p>
+        <p id="complete-summary" class="complete-summary"></p>
       </div>
 
-      <!-- Current task -->
-      <p id="active-task-name" class="active-task-name"></p>
-      <p id="focus-site-display" class="focus-site-display" hidden></p>
-
-      <!-- Timer card -->
-      <div class="timer-card" id="timer-card">
-        <div class="timer-row">
-          <div id="session-timer" class="timer">20:00</div>
-          <button id="pause-btn" class="btn-pause-icon" title="Pause">⏸</button>
-        </div>
-        <div class="timer-card-label">SPRINT TIME REMAINING</div>
-        <div id="sprint-counter" class="sprint-counter">Sprint 1</div>
-      </div>
-
-      <!-- Switch task row -->
-      <div class="switch-row">
-        <input
-          id="switch-input"
-          type="text"
-          placeholder="New task..."
-          maxlength="120"
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <button id="switch-btn" class="btn-switch" disabled>Switch</button>
-      </div>
-
-      <!-- End session -->
-      <button id="end-btn" class="btn-end">End Session</button>
-
-      <!-- Parked tasks -->
-      <div id="parked-section" class="parked-section" hidden>
-        <div class="parked-divider"></div>
-        <div class="parked-header-row">
-          <span class="parked-label">PARKED</span>
-          <span id="parked-count" class="parked-count-badge">0</span>
-        </div>
-        <div id="parked-list" class="parked-list"></div>
-        <p class="parked-hint">click a pill to resume · hover to dismiss</p>
-      </div>
+      <button id="another-btn" class="btn-primary">Another sprint</button>
+      <button id="done-btn" class="btn-end">I'm done</button>
     </div>
-
-    <!-- ── Footer (both views) ───────────────────────────────── -->
-    <footer class="footer">Be kind to your brain 🧠</footer>
 
   </div>
   <script src="popup.js"></script>
