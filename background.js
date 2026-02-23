@@ -18,11 +18,13 @@ function isSameSite(a, b) {
 }
 
 // ── Drift check (runs every 1 minute) ─────────────────────────────────────
+const DRIFT_THRESHOLD_MINS = 2;   // notify after this many minutes away
+const DRIFT_ALARM_INTERVAL = 1;   // alarm fires every N minutes
 
 async function checkDrift() {
   console.log('[boop] checkDrift() called');
 
-  const data = await chrome.storage.local.get(['task', 'focusSite', 'leftAt', 'paused']);
+  const data = await chrome.storage.local.get(['task', 'focusSite', 'leftAt', 'notifiedAt', 'paused']);
   console.log('[boop] storage:', data);
 
   if (!data.task || !data.focusSite) {
@@ -47,11 +49,12 @@ async function checkDrift() {
     console.log('[boop] active tab domain:', currentDomain, '| focus domain:', data.focusSite);
 
     if (isSameSite(currentDomain, data.focusSite)) {
-      // Back on focus site — clear leftAt if it was set
+      // Back on focus site — reset drift state
       console.log('[boop] on focus site — on track');
-      if (data.leftAt) {
-        await chrome.storage.local.set({ leftAt: null });
-        console.log('[boop] cleared leftAt');
+      if (data.leftAt || data.notifiedAt) {
+        await chrome.storage.local.set({ leftAt: null, notifiedAt: null });
+        chrome.notifications.clear('boop-drift');
+        console.log('[boop] cleared leftAt + notifiedAt');
       }
       return;
     }
@@ -67,14 +70,19 @@ async function checkDrift() {
 
     // They were already away — check how long
     const minsAway = (Date.now() - data.leftAt) / 60000;
-    console.log('[boop] away for', minsAway.toFixed(2), 'minutes');
+    console.log('[boop] away for', minsAway.toFixed(2), 'min | threshold:', DRIFT_THRESHOLD_MINS, 'min | already notified:', !!data.notifiedAt);
 
-    if (minsAway < 2) {
-      console.log('[boop] under 2-minute threshold, no notification yet');
+    if (minsAway < DRIFT_THRESHOLD_MINS) {
+      console.log('[boop] under threshold, no notification yet');
       return;
     }
 
-    // Send notification
+    if (data.notifiedAt) {
+      console.log('[boop] already notified this drift episode, skipping');
+      return;
+    }
+
+    // Send notification — only once per drift episode
     const minsDisplay = Math.floor(minsAway);
     const title = 'Boop!';
     const message = `You have been away from ${data.focusSite} for ${minsDisplay} minute${minsDisplay !== 1 ? 's' : ''}. You were working on: ${data.task}`;
@@ -90,6 +98,7 @@ async function checkDrift() {
         console.log('[boop] notification error:', chrome.runtime.lastError.message);
       } else {
         console.log('[boop] notification sent, id:', id);
+        chrome.storage.local.set({ notifiedAt: Date.now() });
       }
     });
   });
@@ -168,9 +177,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     chrome.alarms.clear('boop-sprint');
     chrome.notifications.clear('boop-drift');
 
-    // Start the drift-check alarm (every 1 minute)
-    chrome.alarms.create('drift-check', { periodInMinutes: 1 });
-    console.log('[boop] drift-check alarm created (every 1 min)');
+    // Start the drift-check alarm
+    chrome.alarms.create('drift-check', { periodInMinutes: DRIFT_ALARM_INTERVAL });
+    console.log('[boop] drift-check alarm created, interval:', DRIFT_ALARM_INTERVAL, 'min');
 
     // Start the sprint alarm
     chrome.alarms.create('boop-sprint', { delayInMinutes: sprintMins });
@@ -190,7 +199,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     chrome.notifications.clear('boop-drift');
     chrome.notifications.clear('boop-sprint');
     chrome.storage.local.remove(
-      ['focusSite', 'leftAt', 'sprintMins', 'sprintEndTime', 'sprintCount', 'paused', 'pausedAt'],
+      ['focusSite', 'leftAt', 'notifiedAt', 'sprintMins', 'sprintEndTime', 'sprintCount', 'paused', 'pausedAt'],
       () => { sendResponse({ ok: true }); }
     );
     return true;
@@ -210,8 +219,8 @@ chrome.runtime.onStartup.addListener(async () => {
   }
 
   // Restore drift-check alarm
-  chrome.alarms.create('drift-check', { periodInMinutes: 1 });
-  console.log('[boop] restored drift-check alarm');
+  chrome.alarms.create('drift-check', { periodInMinutes: DRIFT_ALARM_INTERVAL });
+  console.log('[boop] restored drift-check alarm, interval:', DRIFT_ALARM_INTERVAL, 'min');
 
   // Restore sprint alarm if time remains and not paused
   if (data.sprintEndTime && !data.paused) {
