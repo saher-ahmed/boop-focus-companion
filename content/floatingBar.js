@@ -15,7 +15,10 @@
 
     // ── Injection ─────────────────────────────────────────────────────────────
     function injectBar(task, timeLeft, isPaused, savedX, savedY) {
-        if (document.getElementById('focboost-host')) return;
+        if (document.getElementById('focboost-host')) {
+            console.log('[focboost] Bar already exists, skipping injection');
+            return;
+        }
         if (!document.body) {
             console.warn('[focboost] document.body not found, retrying...');
             setTimeout(() => {
@@ -26,7 +29,7 @@
             return;
         }
 
-        console.log('[focboost] Injecting floating bar');
+        console.log('[focboost] Injecting floating bar:', { task, timeLeft, isPaused, savedX, savedY });
         host = document.createElement('div');
         host.id = 'focboost-host';
         Object.assign(host.style, {
@@ -215,7 +218,9 @@
     });
 
     function updateTimerDisplay(t) {
-        if (t === undefined || t === null) return;
+        if (t === undefined || t === null || isNaN(t)) {
+            return;
+        }
         const mm = String(Math.floor(t / 60)).padStart(2, '0');
         const ss = String(t % 60).padStart(2, '0');
         const el = shadow?.getElementById('countdown');
@@ -224,24 +229,43 @@
 
     // ── Initialization ─────────────────────────────────────────────────────────
     function init() {
-        chrome.storage.local.get(
-            ['sessionActive', 'sessionTask', 'sessionTimeLeft', 'sessionPaused', 'floatingBarEnabled', 'barPositionX', 'barPositionY'],
-            (data) => {
-                if (data.floatingBarEnabled === false) return;
-                if (!data.sessionActive) return;
+        console.log('[focboost] init() called');
+        try {
+            chrome.storage.local.get(
+                ['sessionActive', 'sessionTask', 'sessionTimeLeft', 'sessionPaused', 'floatingBarEnabled', 'barPositionX', 'barPositionY'],
+                (data) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('[focboost] Storage error:', chrome.runtime.lastError);
+                        return;
+                    }
+                    console.log('[focboost] Storage data:', data);
 
-                chrome.storage.session.get('barDismissed', (result) => {
-                    if (result.barDismissed) return;
-                    injectBar(data.sessionTask, data.sessionTimeLeft, data.sessionPaused, data.barPositionX, data.barPositionY);
-                });
-            }
-        );
+                    if (data.floatingBarEnabled === false) {
+                        console.log('[focboost] Floating bar disabled in settings');
+                        return;
+                    }
+                    if (!data.sessionActive) {
+                        console.log('[focboost] No active session found');
+                        return;
+                    }
+
+                    chrome.storage.session.get('barDismissed', (result) => {
+                        console.log('[focboost] barDismissed state:', result.barDismissed);
+                        if (result.barDismissed) return;
+                        injectBar(data.sessionTask, data.sessionTimeLeft, data.sessionPaused, data.barPositionX, data.barPositionY);
+                    });
+                }
+            );
+        } catch (e) {
+            console.error('[focboost] Critical init error:', e);
+        }
     }
 
     init();
 
     chrome.storage.onChanged.addListener((changes, area) => {
         if (area !== 'local') return;
+        console.log('[focboost] Storage changed in local:', changes);
 
         if (changes.sessionTimeLeft && shadow) {
             updateTimerDisplay(changes.sessionTimeLeft.newValue);
@@ -265,9 +289,11 @@
 
         if (changes.sessionActive) {
             if (changes.sessionActive.newValue === false && host) {
+                console.log('[focboost] Session deactivated, removing bar');
                 host.remove();
                 host = null;
             } else if (changes.sessionActive.newValue === true && !host) {
+                console.log('[focboost] Session activated, injecting bar');
                 chrome.storage.local.get(
                     ['sessionTask', 'sessionTimeLeft', 'sessionPaused', 'floatingBarEnabled', 'barPositionX', 'barPositionY'],
                     (data) => {

@@ -33,11 +33,12 @@ function calculateScore(distractions, pauses, difficulty) {
 }
 
 async function saveState() {
+  const timeLeft = state.endTime ? Math.round(Math.max(0, (state.endTime - Date.now()) / 1000)) : 0;
   await chrome.storage.local.set({
     focboostState: state,
     sessionActive: state.isActive,
     sessionTask: state.task,
-    sessionTimeLeft: Math.round(Math.max(0, state.endTime - Date.now()) / 1000),
+    sessionTimeLeft: timeLeft,
     sessionPaused: state.isPaused
   });
 }
@@ -58,7 +59,7 @@ async function handleSprintDone() {
   state.sprintDone = true;
   state.finalScore = score;
 
-  saveState();
+  await saveState();
   chrome.alarms.clearAll();
 
   if (state.settings?.notifications) {
@@ -88,7 +89,23 @@ function stopTicker() {
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
-loadState();
+// Initialize
+(async () => {
+  await loadState();
+  if (state.isActive && !state.isPaused) {
+    startTicker();
+  }
+})();
+
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('[focboost] Extension installed/updated');
+  // Initialize storage if needed
+  chrome.storage.local.get(['blockedSites'], (data) => {
+    if (!data.blockedSites) {
+      chrome.storage.local.set({ blockedSites: ['facebook.com', 'twitter.com', 'instagram.com', 'youtube.com', 'reddit.com'] });
+    }
+  });
+});
 
 // ── Messages ────────────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
