@@ -1,0 +1,83 @@
+#focboost-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: #ffffff !important;
+    z-index: 9999999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: 'DM Sans', -apple-system, sans-serif !important;
+    animation: focboost-fadeIn 200ms ease !important;
+}
+
+@keyframes focboost-fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.focboost-card {
+    max-width: 400px !important;
+    text-align: center !important;
+    padding: 40px !important;
+}
+
+.focboost-title {
+    font-size: 32px !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    margin-bottom: 16px !important;
+    letter-spacing: -0.02em !important;
+}
+
+.focboost-text {
+    font-size: 18px !important;
+    color: #4B5563 !important;
+    line-height: 1.5 !important;
+    margin-bottom: 8px !important;
+}
+
+.focboost-muted {
+    font-size: 14px !important;
+    color: #9CA3AF !important;
+    margin-bottom: 32px !important;
+}
+
+.focboost-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+}
+
+.focboost-btn {
+    padding: 14px 24px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    transition: opacity 180ms ease !important;
+    border: none !important;
+    font-family: inherit !important;
+}
+
+.focboost-btn-primary {
+    background-color: #7C6FF7 !important;
+    color: #ffffff !important;
+}
+
+.focboost-btn-secondary {
+    background-color: #F9FAFB !important;
+    color: #4B5563 !important;
+    border: 1px solid #E5E7EB !important;
+}
+
+.focboost-btn:hover {
+    opacity: 0.9 !important;
+}

@@ -1,120 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <title>Boop</title>
+  <title>Focboost</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="popup.css" />
 </head>
+
 <body>
   <div class="shell">
 
-    <!-- ── Onboarding view ────────────────────────────────────── -->
-    <div id="onboard-view" class="view" hidden>
-
-      <div id="onboard-step-1" class="onboard-step">
-        <img src="boop-mascot.png" class="mascot-large" alt="Boop mascot" />
-        <p class="onboard-title">Hi! I'm Boop.</p>
-        <p class="onboard-body">I help you stay focused by gently nudging you when you drift.</p>
-        <button id="onboard-next-1" class="btn-primary">Next</button>
-      </div>
-
-      <div id="onboard-step-2" class="onboard-step" hidden>
-        <img src="boop-mascot.png" class="mascot-medium" alt="Boop mascot" />
-        <p class="onboard-body">Tell me what you're working on. Pick a sprint (5–20 mins). If you wander off, I'll tap your shoulder.</p>
-        <button id="onboard-next-2" class="btn-primary">Next</button>
-      </div>
-
-      <div id="onboard-step-3" class="onboard-step" hidden>
-        <img src="boop-mascot.png" class="mascot-medium" alt="Boop mascot" />
-        <p class="onboard-body">One last thing: let me send you notifications so I can reach you.</p>
-        <button id="onboard-finish" class="btn-primary">Let's go!</button>
-      </div>
-
-    </div>
-
-    <!-- ── Setup view ─────────────────────────────────────────── -->
-    <div id="setup-view" class="view" hidden>
+    <!-- ── Home Screen (replacing Onboarding/Setup) ──────────────── -->
+    <div id="home-view" class="view">
       <header class="header">
-        <h1 class="wordmark">boop<span class="dot">.</span></h1>
-        <p class="subtitle">gentle focus companion</p>
+        <div class="header-top">
+          <div class="wordmark-container">
+            <h1 class="wordmark">focboost<span class="dot">.</span></h1>
+            <p class="tagline">gentle focus companion</p>
+          </div>
+          <button id="settings-trigger" class="btn-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+              </path>
+            </svg>
+          </button>
+        </div>
       </header>
 
       <div class="field">
         <label for="task-input">What are you working on?</label>
-        <input
-          id="task-input"
-          type="text"
-          placeholder="e.g. Finishing the pitch deck..."
-          maxlength="120"
-          autocomplete="off"
-          spellcheck="false"
-          autofocus
-        />
+        <input id="task-input" type="text" placeholder="Finishing the pitch deck..." maxlength="120" autocomplete="off"
+          spellcheck="false" autofocus />
       </div>
 
-      <div class="sprint-picker">
-        <button class="sprint-btn" data-mins="5">5 min</button>
-        <button class="sprint-btn" data-mins="10">10 min</button>
-        <button class="sprint-btn" data-mins="15">15 min</button>
-        <button class="sprint-btn selected" data-mins="20">20 min</button>
+      <div class="pill-group-container">
+        <p class="pill-group-label">Difficulty</p>
+        <div id="difficulty-pills" class="pill-group">
+          <button class="pill-btn" data-value="Easy">Easy</button>
+          <button class="pill-btn" data-value="Medium">Medium</button>
+          <button class="pill-btn" data-value="Hard">Hard</button>
+          <button class="pill-btn" data-value="Deep Work">Deep Work</button>
+        </div>
       </div>
 
-      <button id="start-btn" class="btn-primary" disabled>Start focusing</button>
+      <div class="pill-group-container">
+        <p class="pill-group-label">Duration</p>
+        <div id="duration-pills" class="pill-group">
+          <button class="pill-btn" data-value="5">5</button>
+          <button class="pill-btn" data-value="10">10</button>
+          <button class="pill-btn" data-value="15">15</button>
+          <button class="pill-btn selected" data-value="20">20</button>
+          <input type="text" id="custom-duration" class="pill-input" placeholder="min" />
+        </div>
+      </div>
 
-      <div id="recent-sessions" class="recent-sessions" hidden></div>
+      <button id="start-btn" class="btn-primary btn-full" disabled>Start focusing</button>
+
+      <div class="divider"></div>
+
+      <div class="recent-sessions-container">
+        <p class="section-label">Recent Sessions</p>
+        <div id="recent-sessions-list" class="recent-list">
+          <!-- Session rows will be injected here -->
+        </div>
+      </div>
     </div>
 
-    <!-- ── Active view ────────────────────────────────────────── -->
-    <div id="active-view" class="view" hidden>
-      <header class="header header-active">
-        <div class="header-logo">
-          <img src="boop-mascot.png" class="mascot-tiny" alt="" />
-          <h1 class="wordmark">boop<span class="dot">.</span></h1>
+    <!-- Commitment Contract Screen -->
+    <div id="commitment-view" class="view" hidden>
+      <div class="commitment-card">
+        <h2 class="commitment-title">Commitment</h2>
+        <div class="commitment-box">
+          <label class="check-item-large">
+            <input type="checkbox" id="commitment-check" />
+            <span class="check-text">I will only work on <strong id="commitment-task">...</strong> for the next <strong
+                id="commitment-duration">...</strong> mins.</span>
+          </label>
         </div>
+        <p class="commitment-muted">This action is logged. Deep focus requires commitment.</p>
+        <button id="confirm-commitment-btn" class="btn-primary btn-full" disabled>Confirm & Begin</button>
+      </div>
+    </div>
+
+    <!-- Active Timer Screen -->
+    <div id="timer-view" class="view" hidden>
+      <header class="header">
+        <p id="active-task-label" class="task-muted-label">Pitch Deck</p>
       </header>
 
-      <div id="welcome-back" class="welcome-back" hidden>
-        <span id="welcome-back-text"></span>
+      <div class="timer-container">
+        <svg class="timer-ring" width="180" height="180">
+          <circle class="timer-ring-bg" cx="90" cy="90" r="80" />
+          <circle id="timer-ring-progress" class="timer-ring-progress" cx="90" cy="90" r="80" />
+        </svg>
+        <div class="timer-content">
+          <div id="timer-countdown" class="timer-mono">20:00</div>
+          <p id="timer-status" class="timer-sublabel">remaining</p>
+        </div>
       </div>
 
-      <div id="status-pill" class="status-pill status-on-track">
-        <span class="status-dot"></span>
-        <span id="status-text">Focusing</span>
+      <div class="timer-actions">
+        <button id="pause-resume-btn" class="btn-secondary">Pause</button>
+        <button id="end-session-btn" class="btn-secondary">End Session</button>
       </div>
 
-      <div class="task-block">
-        <p id="active-task-name" class="task-name"></p>
-        <p id="focus-domain" class="focus-domain" hidden></p>
+      <button id="distraction-btn" class="btn-distraction">I got distracted <span id="distraction-count"
+          class="count-badge">0</span></button>
+
+      <div class="blocked-card">
+        <p class="blocked-card-title">Active blocking</p>
+        <div id="blocked-tags" class="tag-group">
+          <!-- Blocked site tags -->
+        </div>
       </div>
-
-      <div id="timer-display" class="timer-display">--:--</div>
-      <p id="sprint-label" class="sprint-label">Sprint 1</p>
-
-      <button id="end-btn" class="btn-end">End session</button>
     </div>
 
-    <!-- ── Complete view ──────────────────────────────────────── -->
-    <div id="complete-view" class="view" hidden>
-      <div class="complete-block">
-        <img src="boop-mascot.png" class="mascot-medium" alt="Boop mascot" />
-        <p id="complete-heading" class="complete-heading"></p>
-        <p id="complete-subtext" class="complete-subtext"></p>
-        <p id="complete-summary" class="complete-summary"></p>
+    <!-- Result Screen -->
+    <div id="result-view" class="view" hidden>
+      <div class="score-circle-container">
+        <div id="score-badge" class="score-badge">92</div>
       </div>
-      <button id="another-btn" class="btn-primary">Go again</button>
-      <button id="done-btn" class="btn-end">Take a break</button>
+      <p id="session-summary" class="summary-line">20 min · 1 distraction · 0 pauses</p>
+
+      <div class="commitment-check-container">
+        <p class="section-label">Commitments kept</p>
+        <div id="post-commitment-list" class="check-list">
+          <!-- Commitment checkboxes -->
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button id="view-weekly-btn" class="btn-secondary">Weekly View</button>
+        <button id="done-btn" class="btn-primary">Done</button>
+      </div>
     </div>
 
-    <!-- ── Idle view ───────────────────────────────────────────── -->
-    <div id="idle-view" class="view" hidden>
-      <div class="idle-block">
-        <img src="boop-mascot.png" class="mascot-large" alt="Boop mascot" />
-        <p class="idle-text">Rest up. I'll be here.</p>
+    <!-- Weekly View Screen -->
+    <div id="weekly-view" class="view" hidden>
+      <div class="header-top">
+        <button id="weekly-back-btn" class="btn-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 class="wordmark">insights<span class="dot">.</span></h2>
       </div>
-      <button id="new-session-btn" class="btn-primary">Start fresh</button>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <p class="stat-label">Total Time</p>
+          <p id="total-focus-time" class="stat-value">0h 0m</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Avg. Score</p>
+          <p id="avg-focus-score" class="stat-value">0</p>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div id="weekly-chart" class="bar-chart">
+          <!-- Bars injected here -->
+        </div>
+        <div class="chart-labels">
+          <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+        </div>
+      </div>
+
+      <div class="insights-container">
+        <p class="section-label">Trend</p>
+        <p id="weekly-trend" class="insight-text">Calculating focus trends...</p>
+      </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings-view" class="view" hidden>
+      <div class="header-top">
+        <button id="settings-back-btn" class="btn-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 class="wordmark">settings<span class="dot">.</span></h2>
+      </div>
+
+      <div class="settings-content">
+        <div class="settings-group">
+          <p class="section-label">General</p>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-title">Show floating focus bar</span>
+              <span class="setting-desc">A slim bar follows you during sessions.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="floating-bar-toggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <p class="section-label">Blocked Sites</p>
+          <div id="settings-blocked-list" class="tag-list">
+            <!-- Tags injected here -->
+          </div>
+          <div class="input-row">
+            <input type="text" id="add-site-input" placeholder="e.g. twitter.com" />
+            <button id="add-site-btn" class="btn-primary-small">Add</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <p class="section-label">Preferences</p>
+          <label class="check-item-spaced">
+            <span class="check-label-text">Desktop Notifications</span>
+            <input type="checkbox" id="notifications-toggle" checked />
+          </label>
+          <label class="check-item-spaced">
+            <span class="check-label-text">Auto-pause on drift</span>
+            <input type="checkbox" id="autopause-toggle" checked />
+          </label>
+        </div>
+
+        <div class="settings-group">
+          <p class="section-label">Account</p>
+          <p class="meta-text">focus-hero@focboost.com</p>
+          <button id="logout-btn" class="link-btn">Sign out</button>
+        </div>
+      </div>
     </div>
 
   </div>
   <script src="popup.js"></script>
 </body>
+
 </html>
