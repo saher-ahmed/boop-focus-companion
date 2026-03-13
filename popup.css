@@ -396,6 +396,21 @@ input[type="text"]:focus {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Reset button ────────────────────────────────────────────────────────── */
+.btn-reset {
+  align-self: center;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color var(--ease);
+}
+
+.btn-reset:hover { color: var(--text-secondary); }
+
 /* ── Idle view ───────────────────────────────────────────────────────────── */
 .idle-block {
   display: flex;

@@ -34,6 +34,7 @@ const doneBtn         = document.getElementById('done-btn');
 const newSessionBtn   = document.getElementById('new-session-btn');
 // Setup extras
 const recentSessions  = document.getElementById('recent-sessions');
+const resetBtn        = document.getElementById('reset-btn');
 
 // ── State ──────────────────────────────────────────────────────────────────
 let selectedSprint      = 20;
@@ -108,7 +109,7 @@ function showWelcomeBack(leftAt) {
 // together, so we can freeze the timer immediately on the same tick drift starts.
 function tick() {
   chrome.storage.local.get(
-    ['sprintEndTime', 'autoPaused', 'autoPausedAt', 'sprintDone', 'leftAt'],
+    ['sprintEndTime', 'autoPaused', 'autoPausedAt', 'sprintDone', 'leftAt', 'totalDriftMs'],
     (data) => {
       if (data.sprintDone) {
         stopTick();
@@ -142,10 +143,32 @@ function tick() {
 
           statusPill.className = 'status-pill status-on-track';
           statusText.textContent = 'Focusing';
+          timerDisplay.classList.remove('paused');
 
-          if (data.sprintEndTime) {
+          // If autoPaused is still set we just returned from a drift. Extend
+          // sprintEndTime immediately rather than waiting for the background
+          // alarm (which only fires every 30s).
+          if (data.autoPaused && data.autoPausedAt && data.sprintEndTime) {
+            const now      = Date.now();
+            const awayMs   = now - data.autoPausedAt;
+            const newEnd   = data.sprintEndTime + awayMs;
+            const remaining = (newEnd - now) / 60000;
+
+            chrome.storage.local.set({
+              autoPaused:   false,
+              autoPausedAt: null,
+              leftAt:       null,
+              lastNudgeAt:  null,
+              sprintEndTime: newEnd,
+              totalDriftMs: (data.totalDriftMs || 0) + awayMs,
+            });
+            if (remaining > 0) {
+              chrome.alarms.create('boop-sprint', { delayInMinutes: remaining });
+            }
+            chrome.notifications.clear('boop-drift');
+            timerDisplay.textContent = formatMS(newEnd - now);
+          } else if (data.sprintEndTime) {
             timerDisplay.textContent = formatMS(data.sprintEndTime - Date.now());
-            timerDisplay.classList.remove('paused');
           }
         } else {
           // ── Drifting ─────────────────────────────────────────────────────
@@ -533,6 +556,11 @@ endBtn.addEventListener('click', endSession);
 anotherBtn.addEventListener('click', anotherSprint);
 doneBtn.addEventListener('click', takeBreak);
 newSessionBtn.addEventListener('click', showSetup);
+resetBtn.addEventListener('click', () => {
+  if (window.confirm('Clear all Boop data?')) {
+    chrome.storage.local.clear(() => window.location.reload());
+  }
+});
 
 // ── Boot: restore state ────────────────────────────────────────────────────
 chrome.storage.local.get(
